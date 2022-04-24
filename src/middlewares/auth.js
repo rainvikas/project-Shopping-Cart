@@ -1,19 +1,22 @@
 const jwt = require('jsonwebtoken')
+const userModel = require("../Models/userModel")
 const mongoose = require('mongoose')
-const UserModel = require("../model/userModel")
+
 
 const isValidObjectId = function (objectId) {
     return mongoose.Types.ObjectId.isValid(objectId)
 }
 
+
+
 const authentication = function (req, res, next) {
     try {
-        let token = req.headers["x-api-key"]
+        let token = req.header('Authorization')
         if (!token) {
-            res.status(401).send({ status: false, msg: " token is required" })
+           return res.status(401).send({ status: false, msg: " token is required" })
         }
-
-        let decodedToken = jwt.verify(token, "Group-19",{ ignoreExpiration: true })
+        let newToken = token.split(' ')[1]
+        let decodedToken = jwt.verify(newToken,"Group-19" ,{ ignoreExpiration: true })
         if (!decodedToken) {
             return res.status(401).send({ status: false, msg: "token is invalid" })
         }
@@ -21,6 +24,7 @@ const authentication = function (req, res, next) {
         if (decodedToken.exp < timeToExpire) {
             return res.status(401).send({ status: false, msg: "token is expired please login again" })
         }
+
         next()
     }
     catch (error) {
@@ -29,16 +33,17 @@ const authentication = function (req, res, next) {
     }
 }
 
+
 let authorization = async function (req, res, next) {
     try {
         let userId = req.params.userId
 
         if (!isValidObjectId(userId)) {
-            res.status(400).send({ status: false, msg: " bookId is not a valid ObjectId" })
+           return res.status(400).send({ status: false, msg: " userId is not a valid ObjectId" })
         }
-        let token = req.headers["x-api-key"]
+        let token = req.header("Authorization").split(' ')[1]
         let decodedToken = jwt.verify(token, "Group-19")
-        let userDetails = await UserModel.findOne({ _id: userId })
+        let userDetails = await userModel.findOne({ _id: userId })
         if (!userDetails) {
             return res.status(404).send({ status: false, msg: "id not found" })
         }
@@ -52,5 +57,6 @@ let authorization = async function (req, res, next) {
         res.status(500).send({ msg: error })
     }
 }
+
 
 module.exports = {authentication, authorization}
